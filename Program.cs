@@ -90,7 +90,9 @@ class Program
             { "restart", Restart },
             { "clear", Clear },
             { "help", Help },
-            { "commands", Commands }
+            { "commands", Commands },
+            { "return", ReturnToMenu },
+            { "reset", ResetProperties }
         };
 
         _menuCommands = new Dictionary<string, CommandHandler>() {
@@ -138,6 +140,8 @@ class Program
         WriteLineHighlight("clear - Clears the application from text.");
         WriteLineHighlight("restart - Restarts the application (TBD).");
         WriteLineHighlight("commands - Displays all available commands for the current page.");
+        WriteLineHighlight("return - Returns to menu.");
+        WriteLineHighlight("reset - Resets application properties (return does this for you too, unless you are using return on the menu).");
         Console.WriteLine("\n");
     }
 
@@ -255,6 +259,11 @@ class Program
 
     private static void ReturnToMenu(string input)
     {
+        if (CurrentPage == PageTypes.Menu) {
+            WriteLineHighlight("You are already at the menu.");
+            return;
+        }
+
         // Reset the page step/process
         _currentPageStep = 1;
         CurrentPage = PageTypes.Menu;
@@ -264,5 +273,14 @@ class Program
     private static void RemoveNCharsFromNFileNames(string input)
     {
         // TODO: Implement something here.
+    }
+
+    private static void ResetProperties(string input)
+    {
+        // Reset the page step/process
+        _currentPageStep = 1;
+        _writingSubCmd = false;
+
+        WriteLineHighlight("Application properties has been reset!");
     }
 }
