@@ -4,7 +4,7 @@ public enum PageTypes
     None = 0,
     Menu,
     CreateFile,
-    RemoveNCharsFromNFiles
+    MultiRefactorFiles_RemoveChars
 }
 
 class Program
@@ -85,8 +85,7 @@ class Program
 
     private static void InitCommands()
     {
-        _commonCommands = new Dictionary<string, CommandHandler>()
-        {
+        _commonCommands = new Dictionary<string, CommandHandler>() {
             { "quit", Quit },
             { "restart", Restart },
             { "clear", Clear },
@@ -94,18 +93,15 @@ class Program
             { "commands", Commands }
         };
 
-        _menuCommands = new Dictionary<string, CommandHandler>()
-        {
+        _menuCommands = new Dictionary<string, CommandHandler>() {
             { "cfile", CreateFile }
         };
 
-        _createFileCommands = new Dictionary<string, CommandHandler>()
-        {
+        _createFileCommands = new Dictionary<string, CommandHandler>() {
             { _subCmdCommandKey, CreateFile }
         };
 
-        _multiRefactorFiles_RemoveCharsCommands = new Dictionary<string, CommandHandler>()
-        {
+        _multiRefactorFiles_RemoveCharsCommands = new Dictionary<string, CommandHandler>() {
             { _subCmdCommandKey, RemoveNCharsFromNFileNames }
         };
     }
@@ -120,6 +116,10 @@ class Program
 
             case PageTypes.CreateFile:
                 ret = _createFileCommands;
+                break;
+
+            case PageTypes.MultiRefactorFiles_RemoveChars:
+                ret = _multiRefactorFiles_RemoveCharsCommands;
                 break;
 
             default:
