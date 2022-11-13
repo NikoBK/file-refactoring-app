@@ -96,7 +96,8 @@ class Program
         };
 
         _menuCommands = new Dictionary<string, CommandHandler>() {
-            { "cfile", CreateFile }
+            { "cfile", CreateFile },
+            { "refnfiles", RemoveNCharsFromNFileNames }
         };
 
         _createFileCommands = new Dictionary<string, CommandHandler>() {
