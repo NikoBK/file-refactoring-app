@@ -25,6 +25,7 @@ class Program
     // Properties
     public static string RootPath { get; private set; } = string.Empty;
     public static string Template { get; private set; } = string.Empty;
+    public static string CreateFileExtension { get; private set; } = string.Empty;
 
     static void Main(string[] args)
     {
@@ -160,7 +161,9 @@ class Program
         WriteLineHighlight($"~~~ Commands for page: {CurrentPage}\n");
         var commandMap = GetPageCommands();
         foreach (string command in commandMap.Keys) {
-            Console.WriteLine($"{command}");
+            if (command != "subCmd") {
+                Console.WriteLine($"{command}");
+            }
         }
         WriteLineHighlight("\n~~~ End \n");
     }
@@ -197,17 +200,27 @@ class Program
 
                 if (!string.IsNullOrEmpty(input)) {                    
                     // Make sure the file actually exists before we move on.
-                    if (File.Exists(Template))
-                    {
-                        WriteLineHighlight("Great success..");
-                        // We do this here, because we only want to move on if the file exists.
+                    if (File.Exists(Template)) {
+                        WriteLineHighlight("File check: OK (File exists).\n");
+                        CreateFile("");
                     }
-                    else
-                    {
+                    else {
                         WriteLineHighlight($"File: {Template} could not be found! Process has been reset.");
                         ReturnToMenu();
                     }
                 }
+                break;
+
+            case 3:
+                var extension = GetSubCmdValue(input, "Enter file extension: .", $"File extension set: .{input}");
+                if (!string.IsNullOrEmpty(extension)) {
+                    CreateFileExtension = extension;
+                    CreateFile("");
+                }
+                break;
+
+            case 4:
+
                 break;
         }
     }
