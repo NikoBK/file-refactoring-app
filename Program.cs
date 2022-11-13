@@ -55,6 +55,11 @@ class Program
         while (!_exit);
     }
 
+    /// <summary>
+    /// Handle input by checking if the <see cref="CurrentPage"/> has a valid command
+    /// within it's respective commandmap.
+    /// </summary>
+    /// <param name="commandInput"></param>
     private static void HandleInput(string commandInput)
     {
         // If we are handling a common command, just handle it right away.
@@ -76,6 +81,10 @@ class Program
 
     public delegate void CommandHandler(string input);
 
+    /// <summary>
+    /// Writes a line in the console, with yellow foreground color.
+    /// </summary>
+    /// <param name="text"></param>
     private static void WriteLineHighlight(string text)
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -83,6 +92,9 @@ class Program
         Console.ForegroundColor = ConsoleColor.White;
     }
 
+    /// <summary>
+    /// Initialize all prefined available commands per page.
+    /// </summary>
     private static void InitCommands()
     {
         _commonCommands = new Dictionary<string, CommandHandler>() {
@@ -109,6 +121,10 @@ class Program
         };
     }
 
+    /// <summary>
+    /// Returns the dictionary for the application's current page.
+    /// </summary>
+    /// <returns></returns>
     private static Dictionary<string, CommandHandler> GetPageCommands()
     {
         var ret = new Dictionary<string, CommandHandler>();
@@ -133,6 +149,9 @@ class Program
         return ret;
     }
 
+    /// <summary>
+    /// Writes all the common commands, and a few more helpful tips.
+    /// </summary>
     private static void PrintHelp()
     {
         Console.WriteLine("Help: \n");
@@ -146,17 +165,33 @@ class Program
         Console.WriteLine("\n");
     }
 
+    /// <summary>
+    /// Returns input as further attribution to previous input.
+    /// Example: Given a file path, further input is needed to specify the file
+    /// extension that the file path is pointing too.
+    /// <para>This function should only ever be called by a <see cref="CommandHandler"/> during a page process.</para>
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="text"></param>
+    /// <param name="completeMsg"></param>
+    /// <returns></returns>
     private static string GetSubCmdValue(string input, string text, string completeMsg)
     {
         string ret = string.Empty;
 
-        if (!_writingSubCmd)
-        {
+        // If we are not expecting a sub command yet,
+        // it means we are about to, and as thus we write
+        // the expected value and set _writingSubCmd -> true.
+        if (!_writingSubCmd) {
             Console.Write(text);
             _writingSubCmd = true;
         }
-        else
-        {
+        // If we do expect a sub command
+        // we return the input we wrote during this
+        // (the input being the sub command) and increase the page step
+        // representing how far along the process we are. A sucessor message
+        // is written to let the user know, all went well.
+        else {
             ret = input;
             _writingSubCmd = false;
             _currentPageStep++;
@@ -201,6 +236,10 @@ class Program
         WriteLineHighlight("\n~~~ End \n");
     }
 
+    /// <summary>
+    /// A 5 step process of creating a file, with or without a code/script template.
+    /// </summary>
+    /// <param name="input"></param>
     private static void CreateFile(string input)
     {
         if (CurrentPage != PageTypes.CreateFile) {
@@ -253,7 +292,7 @@ class Program
                 break;
 
             case 4:
-
+                // TODO: Implement something here..
                 break;
         }
     }
@@ -271,6 +310,12 @@ class Program
         _writingSubCmd = false;
     }
 
+    /// <summary>
+    /// A function that refactors every file within a directory (folder),
+    /// removing n chars from every file's name. The offset and length of chars
+    /// to be removed from file names can be adjusted dynamically.
+    /// </summary>
+    /// <param name="input"></param>
     private static void RemoveNCharsFromNFileNames(string input)
     {
         // TODO: Implement something here.
