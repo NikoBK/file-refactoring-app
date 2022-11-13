@@ -3,13 +3,15 @@ public enum PageTypes
 {
     None = 0,
     Menu,
-    CreateFile
+    CreateFile,
+    RemoveNCharsFromNFiles
 }
 
 class Program
 {
     private static bool _exit = false;
     public static PageTypes CurrentPage = PageTypes.None;
+    private static string _subCmdCommandKey = "subCmd";
 
     // Most pages have steps for processes.
     private static int _currentPageStep = 1;
@@ -21,6 +23,7 @@ class Program
     private static Dictionary<string, CommandHandler>? _menuCommands;
     private static Dictionary<string, CommandHandler>? _commonCommands; // Can be used on any page.
     private static Dictionary<string, CommandHandler>? _createFileCommands;
+    private static Dictionary<string, CommandHandler>? _multiRefactorFiles_RemoveCharsCommands;
 
     // Properties
     public static string RootPath { get; private set; } = string.Empty;
@@ -98,7 +101,12 @@ class Program
 
         _createFileCommands = new Dictionary<string, CommandHandler>()
         {
-            { "subCmd", CreateFile }
+            { _subCmdCommandKey, CreateFile }
+        };
+
+        _multiRefactorFiles_RemoveCharsCommands = new Dictionary<string, CommandHandler>()
+        {
+            { _subCmdCommandKey, RemoveNCharsFromNFileNames }
         };
     }
 
@@ -133,6 +141,26 @@ class Program
         Console.WriteLine("\n");
     }
 
+    private static string GetSubCmdValue(string input, string text, string completeMsg)
+    {
+        string ret = string.Empty;
+
+        if (!_writingSubCmd)
+        {
+            Console.Write(text);
+            _writingSubCmd = true;
+        }
+        else
+        {
+            ret = input;
+            _writingSubCmd = false;
+            _currentPageStep++;
+            Console.WriteLine(completeMsg);
+        }
+
+        return ret;
+    }
+
     // Commands
     private static void Quit(string input)
     {
@@ -161,7 +189,7 @@ class Program
         WriteLineHighlight($"~~~ Commands for page: {CurrentPage}\n");
         var commandMap = GetPageCommands();
         foreach (string command in commandMap.Keys) {
-            if (command != "subCmd") {
+            if (command != _subCmdCommandKey) {
                 Console.WriteLine($"{command}");
             }
         }
@@ -206,7 +234,7 @@ class Program
                     }
                     else {
                         WriteLineHighlight($"File: {Template} could not be found! Process has been reset.");
-                        ReturnToMenu();
+                        ReturnToMenu("");
                     }
                 }
                 break;
@@ -225,29 +253,16 @@ class Program
         }
     }
 
-    private static string GetSubCmdValue(string input, string text, string completeMsg)
-    {
-        string ret = string.Empty;
-
-        if (!_writingSubCmd) {
-            Console.Write(text);
-            _writingSubCmd = true;
-        } else
-        {
-            ret = input;
-            _writingSubCmd = false;
-            _currentPageStep++;
-            Console.WriteLine(completeMsg);
-        }
-
-        return ret;
-    }
-
-    private static void ReturnToMenu()
+    private static void ReturnToMenu(string input)
     {
         // Reset the page step/process
         _currentPageStep = 1;
         CurrentPage = PageTypes.Menu;
         _writingSubCmd = false;
+    }
+
+    private static void RemoveNCharsFromNFileNames(string input)
+    {
+        // TODO: Implement something here.
     }
 }
