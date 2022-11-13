@@ -8,16 +8,17 @@ public enum PageTypes
 
 class Program
 {
+    private static bool _exit = false;
     public static PageTypes CurrentPage = PageTypes.None;
 
     // Key: command, Value: Command handler.
     private static Dictionary<string, CommandHandler>? _menuCommands;
+    private static Dictionary<string, CommandHandler>? _commonCommands; // Can be used on any page.
 
     static void Main(string[] args)
     {
         Console.Title = "File Refactoring App";
         string input;
-        bool exit = false;
         InitCommands();
 
         Console.WriteLine("A nice tool for renaming, editing & creating files easily.\n");
@@ -26,15 +27,23 @@ class Program
 
         do
         {
+            Console.Write("Enter command: ");
             input = Console.ReadLine();
             HandleInput(input);
-            Thread.Sleep(500);
+            Thread.Sleep(250);
         } 
-        while (!exit);
+        while (!_exit);
     }
 
     private static void HandleInput(string commandInput)
     {
+        // If we are handling a common command, just handle it right away.
+        if (_commonCommands.ContainsKey(commandInput)) {
+            _commonCommands[commandInput](commandInput);
+            return;
+        }
+
+        // If the command input is not a common command.
         var commandMap = GetPageCommands();
         if (commandMap.ContainsKey(commandInput)) {
             commandMap[commandInput](commandInput);
@@ -66,6 +75,14 @@ class Program
 
     private static void InitCommands()
     {
+        _commonCommands = new Dictionary<string, CommandHandler>()
+        {
+            { "quit", Quit },
+            { "restart", Restart },
+            { "clear", Clear },
+            { "help", Help }
+        };
+
         _menuCommands = new Dictionary<string, CommandHandler>()
         {
             { "cfile", CreateFile }
@@ -89,8 +106,32 @@ class Program
     }
 
     // Commands
+    private static void Quit(string input)
+    {
+        WriteLineHighlight("Quitting application...");
+        _exit = true;
+    }
+
+    private static void Restart(string input)
+    {
+        // TODO: Implement something here..
+        WriteLineHighlight("To be added...");
+    }
+
+    private static void Clear(string input)
+    {
+        Console.Clear();
+    }
+
+    private static void Help(string input)
+    {
+        PrintHelp();
+    }
+
     private static void CreateFile(string input)
     {
+        CurrentPage = PageTypes.CreateFile;
+        Console.WriteLine("\n ~~~ Creating a file:");
         Console.WriteLine("Welcome to the menu for creating a file!");
     }
 }
