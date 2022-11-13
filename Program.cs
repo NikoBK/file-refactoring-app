@@ -22,6 +22,10 @@ class Program
     private static Dictionary<string, CommandHandler>? _commonCommands; // Can be used on any page.
     private static Dictionary<string, CommandHandler>? _createFileCommands;
 
+    // Properties
+    public static string RootPath { get; private set; } = string.Empty;
+    public static string Template { get; private set; } = string.Empty;
+
     static void Main(string[] args)
     {
         Console.Title = "File Refactoring App";
@@ -34,6 +38,7 @@ class Program
 
         do
         {
+            // The cursor is "Enter command: " in front of your typing.
             bool showCursor = _writingSubCmd ? false : true;
             if (showCursor) { 
                 Console.Write("Enter command: "); 
@@ -56,7 +61,7 @@ class Program
 
         // If the command input is not a common command.
         var commandMap = GetPageCommands();
-        string key = _writingSubCmd ? "enterValue" : commandInput;
+        string key = _writingSubCmd ? "subCmd" : commandInput;
         if (commandMap.ContainsKey(key)) {
             commandMap[key](commandInput);
         } else
@@ -92,7 +97,7 @@ class Program
 
         _createFileCommands = new Dictionary<string, CommandHandler>()
         {
-            { "enterValue", CreateFile }
+            { "subCmd", CreateFile }
         };
     }
 
@@ -170,31 +175,66 @@ class Program
             Console.WriteLine("\n ~~~ Creating a file:");
             Console.WriteLine("Welcome to the menu for creating a file!");
         }
-
-        string rootPath = string.Empty;
         
         switch(_currentPageStep)
         {
             case 1:
                 var rootDesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/";
-                if (string.IsNullOrEmpty(rootPath)) 
-                {
-                    if (_writingSubCmd) {
-                        rootPath = rootDesktopPath + input;
-                        _writingSubCmd = false;
-                        _currentPageStep++;
-                        Console.WriteLine($"Root path set: {rootPath}");
-                        CreateFile("");
-                    } else {
-                        Console.Write($"Enter root path: {rootDesktopPath}");
-                        _writingSubCmd = true;
-                    }
+
+                if (!string.IsNullOrEmpty(input)) {
+                    RootPath = rootDesktopPath + GetSubCmdValue(input, $"Enter root path: {rootDesktopPath}", $"Root path set: {rootDesktopPath + input}\n");
+                    CreateFile("");
                 }
                 break;
 
             case 2:
-                Console.WriteLine("this is step 2.");
+                if (!_writingSubCmd && _currentPageStep == 2) {
+                    Console.WriteLine("If you want the file to use a template please enter the template path within the root directory. If not type nothing and hit enter.");
+                    WriteLineHighlight("(help-template - Displays what a template is)\n");
+                }
+                
+                Template = RootPath + GetSubCmdValue(input, $"Enter template file path: {RootPath}", $"Template path set: {RootPath + input}\n");
+
+                if (!string.IsNullOrEmpty(input)) {                    
+                    // Make sure the file actually exists before we move on.
+                    if (File.Exists(Template))
+                    {
+                        WriteLineHighlight("Great success..");
+                        // We do this here, because we only want to move on if the file exists.
+                    }
+                    else
+                    {
+                        WriteLineHighlight($"File: {Template} could not be found! Process has been reset.");
+                        ReturnToMenu();
+                    }
+                }
                 break;
         }
+    }
+
+    private static string GetSubCmdValue(string input, string text, string completeMsg)
+    {
+        string ret = string.Empty;
+
+        if (!_writingSubCmd) {
+            Console.Write(text);
+            _writingSubCmd = true;
+        } else
+        {
+            ret = input;
+            _writingSubCmd = false;
+            _currentPageStep++;
+            Console.WriteLine(completeMsg);
+        }
+
+        return ret;
+    }
+
+    private static void ReturnToMenu()
+    {
+        // Reset the page step/process
+        _currentPageStep = 1;
+        CurrentPage = PageTypes.Menu;
+        _writingSubCmd = false;
     }
 }
