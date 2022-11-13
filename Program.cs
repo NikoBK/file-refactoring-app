@@ -55,17 +55,6 @@ class Program
 
     public delegate void CommandHandler(string input);
 
-    private static void PrintHelp()
-    {
-        WriteLineHighlight("> Stop app: 'quit'");
-        WriteLineHighlight("> Restart app: 'restart'");
-        WriteLineHighlight("> Clear the console: 'clear'");
-        WriteLineHighlight("> Help: 'help'");
-        WriteLineHighlight("> Create a file: 'cfile'");
-        WriteLineHighlight("> Template Info: 'help-template'");
-        Console.WriteLine("\n");
-    }
-
     private static void WriteLineHighlight(string text)
     {
         Console.ForegroundColor = ConsoleColor.Yellow;
@@ -80,7 +69,8 @@ class Program
             { "quit", Quit },
             { "restart", Restart },
             { "clear", Clear },
-            { "help", Help }
+            { "help", Help },
+            { "commands", Commands }
         };
 
         _menuCommands = new Dictionary<string, CommandHandler>()
@@ -98,11 +88,22 @@ class Program
                 break;
 
             default:
-                WriteLineHighlight($"Could not find commands for page: {CurrentPage}.");
+                WriteLineHighlight($"Could not find any commands for page: {CurrentPage}.");
                 break;
         }
 
         return ret;
+    }
+
+    private static void PrintHelp()
+    {
+        Console.WriteLine("Help: \n");
+        WriteLineHighlight("help - Prints all common commands.");
+        WriteLineHighlight("quit - Stops the application.");
+        WriteLineHighlight("clear - Clears the application from text.");
+        WriteLineHighlight("restart - Restarts the application (TBD).");
+        WriteLineHighlight("commands - Displays all available commands for the current page.");
+        Console.WriteLine("\n");
     }
 
     // Commands
@@ -126,6 +127,17 @@ class Program
     private static void Help(string input)
     {
         PrintHelp();
+    }
+
+    private static void Commands(string input)
+    {
+        WriteLineHighlight($"~~~ Commands for page: {CurrentPage}\n");
+        var commandMap = GetPageCommands();
+        foreach (string command in commandMap.Keys) {
+            Console.WriteLine($"{command}");
+        }
+        Console.WriteLine("help");
+        WriteLineHighlight("\n~~~ End \n");
     }
 
     private static void CreateFile(string input)
