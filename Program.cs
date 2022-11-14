@@ -1,4 +1,6 @@
 ﻿
+using System.Text;
+
 public enum PageTypes
 {
     None = 0,
@@ -6,7 +8,8 @@ public enum PageTypes
     CreateFile,
     MultiRefactorFiles_RemoveChars,
     RemovePrefixFromName,
-    EditFileExtensions
+    EditFileExtensions,
+    CreateFiles
 }
 
 class Program
@@ -28,11 +31,12 @@ class Program
     private static Dictionary<string, CommandHandler>? _multiRefactorFiles_RemoveCharsCommands;
     private static Dictionary<string, CommandHandler>? _removeStringFromNamesCommands;
     private static Dictionary<string, CommandHandler>? _editFileExtensionsCommands;
+    private static Dictionary<string, CommandHandler>? _createFilesCommands;
 
     // Properties
     public static string DesktopPath { get; private set; } = string.Empty;
     public static string RootPath { get; private set; } = string.Empty;
-    public static string Template { get; private set; } = string.Empty;
+    public static string TemplatePath { get; private set; } = string.Empty;
     public static string FileExtension { get; private set; } = string.Empty;
     public static string FullRefactorDirectoryPath { get; private set; } = string.Empty;
     public static string[]? DirectoryFiles { get; private set; }
@@ -41,6 +45,8 @@ class Program
     public static int RefactorTrimLength { get; private set; } = 1;
     public static string? RemoveString { get; private set; }
     public static string? NewFileExtension { get; private set; }
+    public static string? AssetExtension { get; private set; }
+    public static string OutputDirectory { get; private set; }
 
     static void Main(string[] args)
     {
@@ -126,7 +132,8 @@ class Program
             { "cfile", CreateFile },
             { "refnfiles", RemoveNCharsFromNFileNames },
             { "remnameprefixes", RemovePrefixFromNames },
-            { "refext", EditFileExtentions }
+            { "refext", EditFileExtentions },
+            { "cfiles", CreateFiles }
         };
 
         _createFileCommands = new Dictionary<string, CommandHandler>() {
@@ -143,6 +150,10 @@ class Program
 
         _editFileExtensionsCommands = new Dictionary<string, CommandHandler>() {
             { _subCmdCommandKey, EditFileExtentions }
+        };
+
+        _createFilesCommands = new Dictionary<string, CommandHandler>() {
+            { _subCmdCommandKey, CreateFiles }
         };
     }
 
@@ -172,6 +183,10 @@ class Program
 
             case PageTypes.EditFileExtensions:
                 ret = _editFileExtensionsCommands;
+                break;
+
+            case PageTypes.CreateFiles:
+                ret = _createFilesCommands;
                 break;
 
             default:
@@ -299,16 +314,16 @@ class Program
                     WriteLineHighlight("(help-template - Displays what a template is)\n");
                 }
                 
-                Template = RootPath + GetSubCmdValue(input, $"Enter template file path: {RootPath}", $"Template path set: {RootPath + input}\n");
+                TemplatePath = RootPath + GetSubCmdValue(input, $"Enter template file path: {RootPath}", $"Template path set: {RootPath + input}\n");
 
                 if (!string.IsNullOrEmpty(input)) {                    
                     // Make sure the file actually exists before we move on.
-                    if (File.Exists(Template)) {
+                    if (File.Exists(TemplatePath)) {
                         WriteLineHighlight("File check: OK (File exists).\n");
                         CreateFile("");
                     }
                     else {
-                        WriteLineHighlight($"File: {Template} could not be found! Process has been reset.");
+                        WriteLineHighlight($"File: {TemplatePath} could not be found! Process has been reset.");
                         ReturnToMenu("");
                     }
                 }
@@ -702,6 +717,167 @@ class Program
 
                         var fileSrc = FullRefactorDirectoryPath;
                         File.Move(fileSrc + fileName, fileSrc + newFileName);
+                    }
+
+                    WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
+                }
+                else if (answer.ToLower() == "n") {
+                    ReturnToMenu("");
+                    return;
+                }
+                break;
+        }
+    }
+
+    private static void CreateFiles(string input)
+    {
+        if (CurrentPage != PageTypes.CreateFiles) {
+            CurrentPage = PageTypes.CreateFiles;
+        }
+
+        if (!_writingSubCmd && _currentPageStep == 1) {
+            Console.WriteLine("\n ~~~ Menu: Creating multiple files:");
+        }
+        
+        switch(_currentPageStep)
+        {
+            case 1:
+                if (!string.IsNullOrEmpty(input)) {
+                    RootPath = DesktopPath + GetSubCmdValue(input, $"Enter root path: {DesktopPath}", $"Root path set: {DesktopPath + input}\n");
+                    CreateFiles("");
+                }
+                break;
+
+            case 2:
+                var assetExtension = GetSubCmdValue(input, "Enter asset file extensions for the assets (Not the files we are creating): .", $"Asset file extension set: .{input}\n");
+                if (!string.IsNullOrEmpty(assetExtension)) {
+                    AssetExtension = assetExtension;
+                    CreateFiles("");
+                }
+                break;
+
+            case 3:
+                FullRefactorDirectoryPath = RootPath + GetSubCmdValue(input, $"Assets directory path: {RootPath}", $"Assets directory set: {RootPath + input}");
+
+                if (!string.IsNullOrEmpty(input))
+                {
+                    List<string> directories;
+                    try {
+                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    directories.Add(FullRefactorDirectoryPath);
+                    foreach (string entry in directories)
+                    {
+                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+                        DirectoryFiles = Directory.GetFiles(entry, $"*.{AssetExtension}");
+                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
+                    }
+                    CreateFiles("");
+                }
+                break;
+
+            case 4:
+                if (!_writingSubCmd) {
+                    Console.WriteLine("If you want the files to use a template please enter the template path within the root directory. If not type nothing and hit enter.");
+                    WriteLineHighlight("(help-template - Displays what a template is)\n");
+                }
+                
+                TemplatePath = RootPath + GetSubCmdValue(input, $"Enter template file path: {RootPath}", $"Template path set: {RootPath + input}\n");
+
+                if (!string.IsNullOrEmpty(input)) {                    
+                    // Make sure the file actually exists before we move on.
+                    if (File.Exists(TemplatePath)) {
+                        WriteLineHighlight("File check: OK (File exists).\n");
+                        CreateFiles("");
+                    }
+                    else {
+                        WriteLineHighlight($"File: {TemplatePath} could not be found! Process has been reset.");
+                        ReturnToMenu("");
+                    }
+                }
+                break;
+
+            case 5:
+                var newFileExtension = GetSubCmdValue(input, "Enter file extension for new files: .", $"N files extension set: .{input}\n");
+                if (!string.IsNullOrEmpty(newFileExtension)) {
+                    NewFileExtension = newFileExtension;
+                    CreateFiles("");
+                }
+                break;
+
+            case 6:
+                var outputDir = GetSubCmdValue(input, $"Enter output directory: {RootPath}", $"Output directory set: {RootPath + input}\n");
+                if (!string.IsNullOrEmpty(outputDir)) {
+                    OutputDirectory = RootPath + outputDir + "/";
+                    CreateFiles("");
+                }
+                break;
+
+            case 7:
+                if (!_writingSubCmd) {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Unable to resolve directory. Please try again.");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    WriteLineHighlight($"You are about to create {DirectoryFiles.Length} new files, are you sure you want to continue?");
+                    WriteLineHighlight($"y or Y - Create {DirectoryFiles.Length} new files.");
+                    WriteLineHighlight("n or N - Cancel and return to menu.");
+                }
+
+                var answer = GetSubCmdValue(input, "Confirm: ", "");
+                if (answer.ToLower() == "y") 
+                {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Directory files not found.");
+                        ReturnToMenu("");
+                        return;
+                    }
+
+                    WriteLineHighlight("Creating files...");
+                    WriteLineHighlight("Please wait for the success prompt.");
+
+                    foreach (var file in DirectoryFiles)
+                    {
+                        string fileContent = File.ReadAllText(TemplatePath);
+                        var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
+
+                        if (string.IsNullOrEmpty(AssetExtension) || !fileName.Contains($".{AssetExtension}"))
+                        {
+                            WriteLineHighlight("No file extension!");
+                            ReturnToMenu("");
+                            return;
+                        }
+
+                        Console.WriteLine($"Parsing: {fileName}...");
+                        int extensionStartPos = fileName.IndexOf($".{AssetExtension}");
+                        string assetNoExt = fileName.Remove(extensionStartPos, $".{AssetExtension}".Length);
+
+                        string newFile = assetNoExt + $".{NewFileExtension}";
+                        Console.WriteLine($"Created new file: {newFile}");
+
+                        var assetSrc = FullRefactorDirectoryPath;
+                        using (FileStream fs = File.Create(OutputDirectory + newFile))
+                        {
+                            if (fileContent.Contains("REPLACE_EXT")) {
+                                fileContent = fileContent.Replace("REPLACE_EXT", assetNoExt + $".{AssetExtension}");
+                            }
+                            if (fileContent.Contains("REPLACE_CLS")) {
+                                fileContent = fileContent.Replace("REPLACE_CLS", assetNoExt);
+                            }
+                            if (fileContent.Contains("REPLACE_CTOR")) {
+                                fileContent = fileContent.Replace("REPLACE_CTOR", assetNoExt);
+                            }
+
+                            byte[] info = new UTF8Encoding(true).GetBytes(fileContent);
+                            fs.Write(info, 0, info.Length);
+                        }
                     }
 
                     WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
