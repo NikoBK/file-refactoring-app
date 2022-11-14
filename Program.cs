@@ -26,15 +26,20 @@ class Program
     private static Dictionary<string, CommandHandler>? _multiRefactorFiles_RemoveCharsCommands;
 
     // Properties
+    public static string DesktopPath { get; private set; } = string.Empty;
     public static string RootPath { get; private set; } = string.Empty;
     public static string Template { get; private set; } = string.Empty;
-    public static string CreateFileExtension { get; private set; } = string.Empty;
+    public static string FileExtension { get; private set; } = string.Empty;
+    public static string[]? DirectoryFiles { get; private set; }
 
     static void Main(string[] args)
     {
         Console.Title = "File Refactoring App";
         string input;
         InitCommands();
+
+        // Set properties.
+        DesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/";
 
         Console.WriteLine("A nice tool for renaming, editing & creating files easily.\n");
         PrintHelp();
@@ -247,23 +252,21 @@ class Program
         }
 
         if (!_writingSubCmd && _currentPageStep == 1) {
-            Console.WriteLine("\n ~~~ Creating a file:");
+            Console.WriteLine("\n ~~~ Menu: Creating a file:");
             Console.WriteLine("Welcome to the menu for creating a file!");
         }
         
         switch(_currentPageStep)
         {
             case 1:
-                var rootDesktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + "/";
-
                 if (!string.IsNullOrEmpty(input)) {
-                    RootPath = rootDesktopPath + GetSubCmdValue(input, $"Enter root path: {rootDesktopPath}", $"Root path set: {rootDesktopPath + input}\n");
+                    RootPath = DesktopPath + GetSubCmdValue(input, $"Enter root path: {DesktopPath}", $"Root path set: {DesktopPath + input}\n");
                     CreateFile("");
                 }
                 break;
 
             case 2:
-                if (!_writingSubCmd && _currentPageStep == 2) {
+                if (!_writingSubCmd) {
                     Console.WriteLine("If you want the file to use a template please enter the template path within the root directory. If not type nothing and hit enter.");
                     WriteLineHighlight("(help-template - Displays what a template is)\n");
                 }
@@ -284,15 +287,16 @@ class Program
                 break;
 
             case 3:
-                var extension = GetSubCmdValue(input, "Enter file extension: .", $"File extension set: .{input}");
+                var extension = GetSubCmdValue(input, "Enter file extension: .", $"File extension set: .{input}\n");
                 if (!string.IsNullOrEmpty(extension)) {
-                    CreateFileExtension = extension;
+                    FileExtension = extension;
                     CreateFile("");
                 }
                 break;
 
             case 4:
-                // TODO: Implement something here..
+                // TODO: Remove this when code for this page step is added.
+                ReturnToMenu("");
                 break;
         }
     }
@@ -308,6 +312,10 @@ class Program
         _currentPageStep = 1;
         CurrentPage = PageTypes.Menu;
         _writingSubCmd = false;
+        FileExtension = string.Empty;
+        DirectoryFiles = null;
+
+        WriteLineHighlight("Returned to menu.");
     }
 
     /// <summary>
@@ -318,7 +326,111 @@ class Program
     /// <param name="input"></param>
     private static void RemoveNCharsFromNFileNames(string input)
     {
-        // TODO: Implement something here.
+        int startOffset;
+        int trimLength;
+        string dirName = string.Empty;
+
+        if (CurrentPage != PageTypes.MultiRefactorFiles_RemoveChars) {
+            CurrentPage = PageTypes.MultiRefactorFiles_RemoveChars;
+        }
+
+        if (!_writingSubCmd && _currentPageStep == 1) {
+            Console.WriteLine("\n ~~~ Menu: Removing multiple characters from multiple file names.");
+        }
+
+        switch(_currentPageStep)
+        {
+            case 1:
+                if (!string.IsNullOrEmpty(input)) {
+                    RootPath = DesktopPath + GetSubCmdValue(input, $"Enter root path: {DesktopPath}", $"Root path set: {DesktopPath + input}\n");
+                    RemoveNCharsFromNFileNames("");
+                }
+                break;
+
+            case 2:
+                var extension = GetSubCmdValue(input, "Enter file extension: .", $"File extension set: .{input}\n");
+                if (!string.IsNullOrEmpty(extension)) {
+                    FileExtension = extension;
+                    RemoveNCharsFromNFileNames("");
+                }
+                break;
+
+            case 3:
+                var path = RootPath + GetSubCmdValue(input, $"Files directory path: {RootPath}", $"Directory: {RootPath + input}");
+
+                if (!string.IsNullOrEmpty(input)) 
+                {
+                    List<string> directories = new List<string>();
+                    try {
+                        directories = Directory.GetDirectories(path, "*", SearchOption.AllDirectories).ToList();
+                    } catch (Exception ex) {
+                        WriteLineHighlight($"Could not find directory: {path}");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    directories.Add(path);
+                    foreach (string entry in directories)
+                    {
+                        dirName = entry.Replace($@"{path}", "").Replace("\\", "");
+                        DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
+                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");                        
+                    }
+                    RemoveNCharsFromNFileNames("");
+                }
+                break;
+
+            case 4:
+                var offset = GetSubCmdValue(input, "Enter name refactor offset: ", $"Start offset: {input}\n");               
+                if (!string.IsNullOrEmpty(offset)) {
+                    bool canParseOffset = int.TryParse(offset, out startOffset);
+                    if (canParseOffset) {
+                        RemoveNCharsFromNFileNames("");
+                    }
+                }
+                break;
+
+            case 5:
+                var trimLen = GetSubCmdValue(input, "Name refactor trim length: ", $"Name refactor trim length set: {input}\n");               
+                if (!string.IsNullOrEmpty(trimLen)) {
+                    bool canParseOffset = int.TryParse(trimLen, out trimLength);
+                    if (canParseOffset) {
+                        RemoveNCharsFromNFileNames("");
+                    }
+                }
+                break;
+
+            case 6:
+                if (!_writingSubCmd) {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Unable to resolve directory. Please try again.");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    WriteLineHighlight($"You are about to refactor {DirectoryFiles.Length}, are you sure you want to continue?");
+                    WriteLineHighlight("y or Y - Do the refactor.");
+                    WriteLineHighlight("n or N - Cancel and return to menu.");
+                }
+
+                var answer = GetSubCmdValue(input, "Confirm: ", "");
+                if (answer.ToLower() == "y") 
+                {
+                    WriteLineHighlight("Refactoring files...");
+                    WriteLineHighlight("Please wait for the success prompt.");
+                    foreach (var file in DirectoryFiles) {
+                        var fileName = $"{(dirName == "" ? "" : $"{dirName}/")}{Path.GetFileName(file)}";
+                        Console.WriteLine($"Refactoring: {fileName}");
+                    }
+
+                    WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
+                }
+                else if (answer.ToLower() == "n") {
+                    WriteLineHighlight(":(");
+                }
+
+                // TODO: Remove this when another step to this process has been added.
+                ReturnToMenu("");
+                break;
+        }
     }
 
     private static void ResetProperties(string input)
@@ -326,6 +438,8 @@ class Program
         // Reset the page step/process
         _currentPageStep = 1;
         _writingSubCmd = false;
+        FileExtension = string.Empty;
+        DirectoryFiles = null;
 
         WriteLineHighlight("Application properties has been reset!");
     }
