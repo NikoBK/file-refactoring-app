@@ -5,7 +5,8 @@ public enum PageTypes
     Menu,
     CreateFile,
     MultiRefactorFiles_RemoveChars,
-    RemovePrefixFromName
+    RemovePrefixFromName,
+    EditFileExtensions
 }
 
 class Program
@@ -26,6 +27,7 @@ class Program
     private static Dictionary<string, CommandHandler>? _createFileCommands;
     private static Dictionary<string, CommandHandler>? _multiRefactorFiles_RemoveCharsCommands;
     private static Dictionary<string, CommandHandler>? _removeStringFromNamesCommands;
+    private static Dictionary<string, CommandHandler>? _editFileExtensionsCommands;
 
     // Properties
     public static string DesktopPath { get; private set; } = string.Empty;
@@ -38,6 +40,7 @@ class Program
     public static int RefactorStartIndex { get; private set; } = 0;
     public static int RefactorTrimLength { get; private set; } = 1;
     public static string? RemoveString { get; private set; }
+    public static string? NewFileExtension { get; private set; }
 
     static void Main(string[] args)
     {
@@ -122,7 +125,8 @@ class Program
         _menuCommands = new Dictionary<string, CommandHandler>() {
             { "cfile", CreateFile },
             { "refnfiles", RemoveNCharsFromNFileNames },
-            { "remnameprefixes", RemovePrefixFromNames }
+            { "remnameprefixes", RemovePrefixFromNames },
+            { "refext", EditFileExtentions }
         };
 
         _createFileCommands = new Dictionary<string, CommandHandler>() {
@@ -135,6 +139,10 @@ class Program
 
         _removeStringFromNamesCommands = new Dictionary<string, CommandHandler>() {
             { _subCmdCommandKey, RemovePrefixFromNames }
+        };
+
+        _editFileExtensionsCommands = new Dictionary<string, CommandHandler>() {
+            { _subCmdCommandKey, EditFileExtentions }
         };
     }
 
@@ -160,6 +168,10 @@ class Program
 
             case PageTypes.RemovePrefixFromName:
                 ret = _removeStringFromNamesCommands;
+                break;
+
+            case PageTypes.EditFileExtensions:
+                ret = _editFileExtensionsCommands;
                 break;
 
             default:
@@ -584,6 +596,120 @@ class Program
 
                 // TODO: Remove this when another step to this process has been added.
                 // ReturnToMenu("");
+                break;
+        }
+    }
+
+    private static void EditFileExtentions(string input)
+    {
+        if (CurrentPage != PageTypes.EditFileExtensions) {
+            CurrentPage = PageTypes.EditFileExtensions;
+        }
+
+        if (!_writingSubCmd && _currentPageStep == 1) {
+            Console.WriteLine("\n ~~~ Menu: Edit file extensions.");
+        }
+
+        switch (_currentPageStep)
+        {
+            case 1:
+                if (!string.IsNullOrEmpty(input)) {
+                    RootPath = DesktopPath + GetSubCmdValue(input, $"Enter root path: {DesktopPath}", $"Root path set: {DesktopPath + input}\n");
+                    EditFileExtentions("");
+                }
+                break;
+
+            case 2:
+                var extension = GetSubCmdValue(input, "Enter file extension (For the files you want to change): .", $"File extension set: .{input}\n");
+                if (!string.IsNullOrEmpty(extension)) {
+                    FileExtension = extension;
+                    EditFileExtentions("");
+                }
+                break;
+
+            case 3:
+                FullRefactorDirectoryPath = RootPath + GetSubCmdValue(input, $"Files directory path: {RootPath}", $"Directory: {RootPath + input}");
+
+                if (!string.IsNullOrEmpty(input))
+                {
+                    List<string> directories;
+                    try {
+                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    }
+                    catch (Exception ex)
+                    {
+                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    directories.Add(FullRefactorDirectoryPath);
+                    foreach (string entry in directories)
+                    {
+                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+                        DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
+                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
+                    }
+                    EditFileExtentions("");
+                }
+                break;
+
+            case 4:
+                var newExtention = GetSubCmdValue(input, "Enter new file extension for all files: .", $"File extension set: .{input}\n");
+                if (!string.IsNullOrEmpty(newExtention)) {
+                    NewFileExtension = newExtention;
+                    EditFileExtentions("");
+                }
+                break;
+
+            case 5:
+                if (!_writingSubCmd) {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Unable to resolve directory. Please try again.");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    WriteLineHighlight($"You are about to refactor {DirectoryFiles.Length}, are you sure you want to continue?");
+                    WriteLineHighlight("y or Y - Do the refactor.");
+                    WriteLineHighlight("n or N - Cancel and return to menu.");
+                }
+
+                var answer = GetSubCmdValue(input, "Confirm: ", "");
+                if (answer.ToLower() == "y") 
+                {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Directory files not found.");
+                        ReturnToMenu("");
+                        return;
+                    }
+
+                    WriteLineHighlight("Refactoring files...");
+                    WriteLineHighlight("Please wait for the success prompt.");
+                    foreach (var file in DirectoryFiles) {                       
+                        var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
+
+                        if (string.IsNullOrEmpty(FileExtension) || !fileName.Contains($".{FileExtension}")) {
+                            WriteLineHighlight("No file extension!");
+                            ReturnToMenu("");
+                            return;
+                        }
+
+                        Console.WriteLine($"Refactoring: {fileName}...");
+                        int extensionStartPos = fileName.IndexOf($".{FileExtension}");
+                        string fileNoExt = fileName.Remove(extensionStartPos, $".{FileExtension}".Length);
+                        string newFileName = fileNoExt + $".{NewFileExtension}";
+
+                        Console.WriteLine($"Changed file extension from: {FileExtension} to: {NewFileExtension}, for file: {fileName}.");
+
+                        var fileSrc = FullRefactorDirectoryPath;
+                        File.Move(fileSrc + fileName, fileSrc + newFileName);
+                    }
+
+                    WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
+                }
+                else if (answer.ToLower() == "n") {
+                    ReturnToMenu("");
+                    return;
+                }
                 break;
         }
     }
