@@ -4,7 +4,8 @@ public enum PageTypes
     None = 0,
     Menu,
     CreateFile,
-    MultiRefactorFiles_RemoveChars
+    MultiRefactorFiles_RemoveChars,
+    RemovePrefixFromName
 }
 
 class Program
@@ -24,6 +25,7 @@ class Program
     private static Dictionary<string, CommandHandler>? _commonCommands; // Can be used on any page.
     private static Dictionary<string, CommandHandler>? _createFileCommands;
     private static Dictionary<string, CommandHandler>? _multiRefactorFiles_RemoveCharsCommands;
+    private static Dictionary<string, CommandHandler>? _removeStringFromNamesCommands;
 
     // Properties
     public static string DesktopPath { get; private set; } = string.Empty;
@@ -35,6 +37,7 @@ class Program
     public static string DirectoryName { get; private set; } = string.Empty;
     public static int RefactorStartIndex { get; private set; } = 0;
     public static int RefactorTrimLength { get; private set; } = 1;
+    public static string? RemoveString { get; private set; }
 
     static void Main(string[] args)
     {
@@ -118,7 +121,8 @@ class Program
 
         _menuCommands = new Dictionary<string, CommandHandler>() {
             { "cfile", CreateFile },
-            { "refnfiles", RemoveNCharsFromNFileNames }
+            { "refnfiles", RemoveNCharsFromNFileNames },
+            { "remnameprefixes", RemovePrefixFromNames }
         };
 
         _createFileCommands = new Dictionary<string, CommandHandler>() {
@@ -127,6 +131,10 @@ class Program
 
         _multiRefactorFiles_RemoveCharsCommands = new Dictionary<string, CommandHandler>() {
             { _subCmdCommandKey, RemoveNCharsFromNFileNames }
+        };
+
+        _removeStringFromNamesCommands = new Dictionary<string, CommandHandler>() {
+            { _subCmdCommandKey, RemovePrefixFromNames }
         };
     }
 
@@ -148,6 +156,10 @@ class Program
 
             case PageTypes.MultiRefactorFiles_RemoveChars:
                 ret = _multiRefactorFiles_RemoveCharsCommands;
+                break;
+
+            case PageTypes.RemovePrefixFromName:
+                ret = _removeStringFromNamesCommands;
                 break;
 
             default:
@@ -429,7 +441,8 @@ class Program
                     WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
                 }
                 else if (answer.ToLower() == "n") {
-                    WriteLineHighlight(":(");
+                    ReturnToMenu("");
+                    return;
                 }
 
                 // TODO: Remove this when another step to this process has been added.
@@ -447,5 +460,131 @@ class Program
         DirectoryFiles = null;
 
         WriteLineHighlight("Application properties has been reset!");
+    }
+
+    private static void RemovePrefixFromNames(string input)
+    {
+        if (CurrentPage != PageTypes.RemovePrefixFromName) {
+            CurrentPage = PageTypes.RemovePrefixFromName;
+        }
+
+        if (!_writingSubCmd && _currentPageStep == 1) {
+            Console.WriteLine("\n ~~~ Menu: Removing prefix from file names.");
+        }
+
+        switch(_currentPageStep)
+        {
+            case 1:                
+                if (!string.IsNullOrEmpty(input)) {
+                    RootPath = DesktopPath + GetSubCmdValue(input, $"Enter root path: {DesktopPath}", $"Root path set: {DesktopPath + input}\n");
+                    RemovePrefixFromNames("");
+                }
+                break;
+
+            case 2:
+                var extension = GetSubCmdValue(input, "Enter file extension: .", $"File extension set: .{input}\n");
+                if (!string.IsNullOrEmpty(extension)) {
+                    FileExtension = extension;
+                    RemovePrefixFromNames("");
+                }
+                break;
+
+            case 3:
+                FullRefactorDirectoryPath = RootPath + GetSubCmdValue(input, $"Files directory path: {RootPath}", $"Directory: {RootPath + input}");
+
+                if (!string.IsNullOrEmpty(input)) 
+                {
+                    List<string> directories;
+                    try {
+                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    } catch (Exception ex) {
+                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    directories.Add(FullRefactorDirectoryPath);
+                    foreach (string entry in directories)
+                    {
+                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+                        DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
+                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");                        
+                    }
+                    RemovePrefixFromNames("");
+                }
+                break;
+
+            case 4:
+                var removeString = GetSubCmdValue(input, "Enter name prefix to be removed: ", $"name prefix to be removed: {input}\n");               
+                if (!string.IsNullOrEmpty(removeString)) {
+                    RemoveString = removeString;
+                    RemovePrefixFromNames("");
+                }
+                break;
+
+            case 5:
+                if (!_writingSubCmd) {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Unable to resolve directory. Please try again.");
+                        ReturnToMenu("");
+                        return;
+                    }
+                    WriteLineHighlight($"You are about to refactor {DirectoryFiles.Length}, are you sure you want to continue?");
+                    WriteLineHighlight("y or Y - Do the refactor.");
+                    WriteLineHighlight("n or N - Cancel and return to menu.");
+                }
+
+                var answer = GetSubCmdValue(input, "Confirm: ", "");
+                if (answer.ToLower() == "y") 
+                {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Directory files not found.");
+                        ReturnToMenu("");
+                        return;
+                    }
+
+                    WriteLineHighlight("Refactoring files...");
+                    WriteLineHighlight("Please wait for the success prompt.");
+                    foreach (var file in DirectoryFiles) {                       
+                        var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
+                        int removeStringStartPos = 0;
+                        int removeStringEndPos = 1;
+
+                        if (string.IsNullOrEmpty(FileExtension)) {
+                            WriteLineHighlight("No file extension!");
+                            ReturnToMenu("");
+                            return;
+                        }
+
+                        bool containsRemoveString = fileName.Contains(RemoveString);
+                        if (!containsRemoveString) {
+                            WriteLineHighlight($"String: {RemoveString} not found in name: {fileName}.");
+                            ReturnToMenu("");
+                            return;
+                        }
+
+                        Console.WriteLine($"Refactoring: {fileName}...");
+                        removeStringStartPos = fileName.IndexOf(RemoveString);
+
+                        string trimmedFileName = fileName.Remove(0, removeStringStartPos);
+                        int extensionStartPos = trimmedFileName.IndexOf($".{FileExtension}");
+                        string stringToRemove = trimmedFileName.Remove(extensionStartPos, $".{FileExtension}".Length);
+
+                        Console.WriteLine($"Remove string: {RemoveString} starts at pos: {removeStringStartPos}, and ends on pos: {removeStringEndPos}.");
+                        var fileSrc = FullRefactorDirectoryPath;
+                        string newFileName = fileName.Remove(removeStringStartPos, stringToRemove.Length);
+                        File.Move(fileSrc + fileName, fileSrc + newFileName);
+                    }
+
+                    WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
+                }
+                else if (answer.ToLower() == "n") {
+                    ReturnToMenu("");
+                    return;
+                }
+
+                // TODO: Remove this when another step to this process has been added.
+                // ReturnToMenu("");
+                break;
+        }
     }
 }
