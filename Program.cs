@@ -30,7 +30,11 @@ class Program
     public static string RootPath { get; private set; } = string.Empty;
     public static string Template { get; private set; } = string.Empty;
     public static string FileExtension { get; private set; } = string.Empty;
+    public static string FullRefactorDirectoryPath { get; private set; } = string.Empty;
     public static string[]? DirectoryFiles { get; private set; }
+    public static string DirectoryName { get; private set; } = string.Empty;
+    public static int RefactorStartIndex { get; private set; } = 0;
+    public static int RefactorTrimLength { get; private set; } = 1;
 
     static void Main(string[] args)
     {
@@ -326,10 +330,6 @@ class Program
     /// <param name="input"></param>
     private static void RemoveNCharsFromNFileNames(string input)
     {
-        int startOffset;
-        int trimLength;
-        string dirName = string.Empty;
-
         if (CurrentPage != PageTypes.MultiRefactorFiles_RemoveChars) {
             CurrentPage = PageTypes.MultiRefactorFiles_RemoveChars;
         }
@@ -356,22 +356,22 @@ class Program
                 break;
 
             case 3:
-                var path = RootPath + GetSubCmdValue(input, $"Files directory path: {RootPath}", $"Directory: {RootPath + input}");
+                FullRefactorDirectoryPath = RootPath + GetSubCmdValue(input, $"Files directory path: {RootPath}", $"Directory: {RootPath + input}");
 
                 if (!string.IsNullOrEmpty(input)) 
                 {
                     List<string> directories = new List<string>();
                     try {
-                        directories = Directory.GetDirectories(path, "*", SearchOption.AllDirectories).ToList();
+                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
                     } catch (Exception ex) {
-                        WriteLineHighlight($"Could not find directory: {path}");
+                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
                         ReturnToMenu("");
                         return;
                     }
-                    directories.Add(path);
+                    directories.Add(FullRefactorDirectoryPath);
                     foreach (string entry in directories)
                     {
-                        dirName = entry.Replace($@"{path}", "").Replace("\\", "");
+                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
                         DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
                         Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");                        
                     }
@@ -380,22 +380,18 @@ class Program
                 break;
 
             case 4:
-                var offset = GetSubCmdValue(input, "Enter name refactor offset: ", $"Start offset: {input}\n");               
+                var offset = GetSubCmdValue(input, "Enter name refactor index(offset): ", $"Start index (offset): {input}\n");               
                 if (!string.IsNullOrEmpty(offset)) {
-                    bool canParseOffset = int.TryParse(offset, out startOffset);
-                    if (canParseOffset) {
-                        RemoveNCharsFromNFileNames("");
-                    }
+                    RefactorStartIndex = int.Parse(offset);
+                    RemoveNCharsFromNFileNames("");
                 }
                 break;
 
             case 5:
                 var trimLen = GetSubCmdValue(input, "Name refactor trim length: ", $"Name refactor trim length set: {input}\n");               
                 if (!string.IsNullOrEmpty(trimLen)) {
-                    bool canParseOffset = int.TryParse(trimLen, out trimLength);
-                    if (canParseOffset) {
-                        RemoveNCharsFromNFileNames("");
-                    }
+                    RefactorTrimLength = int.Parse(trimLen);
+                    RemoveNCharsFromNFileNames("");
                 }
                 break;
 
@@ -414,11 +410,20 @@ class Program
                 var answer = GetSubCmdValue(input, "Confirm: ", "");
                 if (answer.ToLower() == "y") 
                 {
+                    if (DirectoryFiles == null) {
+                        WriteLineHighlight("Directory files not found.");
+                        ReturnToMenu("");
+                        return;
+                    }
+
                     WriteLineHighlight("Refactoring files...");
                     WriteLineHighlight("Please wait for the success prompt.");
                     foreach (var file in DirectoryFiles) {
-                        var fileName = $"{(dirName == "" ? "" : $"{dirName}/")}{Path.GetFileName(file)}";
+                        var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
                         Console.WriteLine($"Refactoring: {fileName}");
+                        var fileSrc = FullRefactorDirectoryPath;
+                        string newFileName = fileName.Remove(RefactorStartIndex, RefactorTrimLength);
+                        File.Move(fileSrc + fileName, fileSrc + newFileName);
                     }
 
                     WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
@@ -428,7 +433,7 @@ class Program
                 }
 
                 // TODO: Remove this when another step to this process has been added.
-                ReturnToMenu("");
+                // ReturnToMenu("");
                 break;
         }
     }
