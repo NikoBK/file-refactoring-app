@@ -1,5 +1,4 @@
-﻿
-using System.Text;
+﻿using System.Text;
 
 public enum PageTypes
 {
@@ -296,7 +295,6 @@ class Program
 
         if (!_writingSubCmd && _currentPageStep == 1) {
             Console.WriteLine("\n ~~~ Menu: Creating a file:");
-            Console.WriteLine("Welcome to the menu for creating a file!");
         }
         
         switch(_currentPageStep)
@@ -323,8 +321,10 @@ class Program
                         CreateFile("");
                     }
                     else {
-                        WriteLineHighlight($"File: {TemplatePath} could not be found! Process has been reset.");
-                        ReturnToMenu("");
+                        HandleError($"File: {TemplatePath} could not be found! Returning to menu...");
+                        //WriteLineHighlight($"File: {TemplatePath} could not be found! Returning to menu...");
+                        //ReturnToMenu("");
+                        //return;
                     }
                 }
                 break;
@@ -335,11 +335,6 @@ class Program
                     FileExtension = extension;
                     CreateFile("");
                 }
-                break;
-
-            case 4:
-                // TODO: Remove this when code for this page step is added.
-                ReturnToMenu("");
                 break;
         }
     }
@@ -399,22 +394,10 @@ class Program
 
                 if (!string.IsNullOrEmpty(input)) 
                 {
-                    List<string> directories = new List<string>();
-                    try {
-                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
-                    } catch (Exception ex) {
-                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
-                        ReturnToMenu("");
-                        return;
+                    bool validDir = GetDirectory(input);
+                    if (validDir) {
+                        RemoveNCharsFromNFileNames("");
                     }
-                    directories.Add(FullRefactorDirectoryPath);
-                    foreach (string entry in directories)
-                    {
-                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
-                        DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
-                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");                        
-                    }
-                    RemoveNCharsFromNFileNames("");
                 }
                 break;
 
@@ -437,9 +420,10 @@ class Program
             case 6:
                 if (!_writingSubCmd) {
                     if (DirectoryFiles == null) {
-                        WriteLineHighlight("Unable to resolve directory. Please try again.");
-                        ReturnToMenu("");
-                        return;
+                        HandleError("Unable to resolve directory. Please try again.");
+                        //WriteLineHighlight("Unable to resolve directory. Please try again.");
+                        //ReturnToMenu("");
+                        //return;
                     }
                     WriteLineHighlight($"You are about to refactor {DirectoryFiles.Length}, are you sure you want to continue?");
                     WriteLineHighlight("y or Y - Do the refactor.");
@@ -447,16 +431,17 @@ class Program
                 }
 
                 var answer = GetSubCmdValue(input, "Confirm: ", "");
-                if (answer.ToLower() == "y") 
-                {
+                if (answer.ToLower() == "y" || answer.ToLower() == "yes") { 
                     if (DirectoryFiles == null) {
-                        WriteLineHighlight("Directory files not found.");
-                        ReturnToMenu("");
-                        return;
+                        HandleError("Directory files not found.");
+                        //WriteLineHighlight("Directory files not found.");
+                        //ReturnToMenu("");
+                        //return;
                     }
 
                     WriteLineHighlight("Refactoring files...");
                     WriteLineHighlight("Please wait for the success prompt.");
+
                     foreach (var file in DirectoryFiles) {
                         var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
                         Console.WriteLine($"Refactoring: {fileName}");
@@ -467,13 +452,10 @@ class Program
 
                     WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
                 }
-                else if (answer.ToLower() == "n") {
+                else {
                     ReturnToMenu("");
                     return;
                 }
-
-                // TODO: Remove this when another step to this process has been added.
-                // ReturnToMenu("");
                 break;
         }
     }
@@ -521,22 +503,26 @@ class Program
 
                 if (!string.IsNullOrEmpty(input)) 
                 {
-                    List<string> directories;
-                    try {
-                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
-                    } catch (Exception ex) {
-                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
-                        ReturnToMenu("");
-                        return;
+                    bool validDir = GetDirectory(input);
+                    if (validDir) {
+                        RemovePrefixFromNames("");
                     }
-                    directories.Add(FullRefactorDirectoryPath);
-                    foreach (string entry in directories)
-                    {
-                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
-                        DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
-                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");                        
-                    }
-                    RemovePrefixFromNames("");
+
+                    //List<string> directories;
+                    //try {
+                    //    directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    //} catch (Exception ex) {
+                    //    WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
+                    //    ReturnToMenu("");
+                    //    return;
+                    //}
+                    //directories.Add(FullRefactorDirectoryPath);
+                    //foreach (string entry in directories)
+                    //{
+                    //    DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+                    //    DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
+                    //    Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");                        
+                    //}                    
                 }
                 break;
 
@@ -549,11 +535,13 @@ class Program
                 break;
 
             case 5:
-                if (!_writingSubCmd) {
+                if (!_writingSubCmd) 
+                {
                     if (DirectoryFiles == null) {
-                        WriteLineHighlight("Unable to resolve directory. Please try again.");
-                        ReturnToMenu("");
-                        return;
+                        HandleError("Unable to resolve directory. Please try again.");
+                        //WriteLineHighlight("Unable to resolve directory. Please try again.");
+                        //ReturnToMenu("");
+                        //return;
                     }
                     WriteLineHighlight($"You are about to refactor {DirectoryFiles.Length}, are you sure you want to continue?");
                     WriteLineHighlight("y or Y - Do the refactor.");
@@ -561,9 +549,10 @@ class Program
                 }
 
                 var answer = GetSubCmdValue(input, "Confirm: ", "");
-                if (answer.ToLower() == "y") 
+                if (answer.ToLower() == "y" || answer.ToLower() == "yes")
                 {
-                    if (DirectoryFiles == null) {
+                    if (DirectoryFiles == null)
+                    {
                         WriteLineHighlight("Directory files not found.");
                         ReturnToMenu("");
                         return;
@@ -571,19 +560,22 @@ class Program
 
                     WriteLineHighlight("Refactoring files...");
                     WriteLineHighlight("Please wait for the success prompt.");
-                    foreach (var file in DirectoryFiles) {                       
+                    foreach (var file in DirectoryFiles)
+                    {
                         var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
                         int removeStringStartPos = 0;
                         int removeStringEndPos = 1;
 
-                        if (string.IsNullOrEmpty(FileExtension)) {
+                        if (string.IsNullOrEmpty(FileExtension))
+                        {
                             WriteLineHighlight("No file extension!");
                             ReturnToMenu("");
                             return;
                         }
 
                         bool containsRemoveString = fileName.Contains(RemoveString);
-                        if (!containsRemoveString) {
+                        if (!containsRemoveString)
+                        {
                             WriteLineHighlight($"String: {RemoveString} not found in name: {fileName}.");
                             ReturnToMenu("");
                             return;
@@ -601,13 +593,12 @@ class Program
                         string newFileName = fileName.Remove(removeStringStartPos, stringToRemove.Length);
                         File.Move(fileSrc + fileName, fileSrc + newFileName);
                     }
-
-                    WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
                 }
-                else if (answer.ToLower() == "n") {
+                else {
                     ReturnToMenu("");
                     return;
                 }
+               
 
                 // TODO: Remove this when another step to this process has been added.
                 // ReturnToMenu("");
@@ -647,24 +638,28 @@ class Program
 
                 if (!string.IsNullOrEmpty(input))
                 {
-                    List<string> directories;
-                    try {
-                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    bool validDir = GetDirectory(input);
+                    if (validDir) {
+                        EditFileExtentions("");
                     }
-                    catch (Exception ex)
-                    {
-                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
-                        ReturnToMenu("");
-                        return;
-                    }
-                    directories.Add(FullRefactorDirectoryPath);
-                    foreach (string entry in directories)
-                    {
-                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
-                        DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
-                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
-                    }
-                    EditFileExtentions("");
+                    //List<string> directories;
+                    //try {
+                    //    directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    //}
+                    //catch (Exception ex)
+                    //{
+                    //    WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
+                    //    ReturnToMenu("");
+                    //    return;
+                    //}
+                    //directories.Add(FullRefactorDirectoryPath);
+                    //foreach (string entry in directories)
+                    //{
+                    //    DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+                    //    DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
+                    //    Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
+                    //}
+                    
                 }
                 break;
 
@@ -689,8 +684,7 @@ class Program
                 }
 
                 var answer = GetSubCmdValue(input, "Confirm: ", "");
-                if (answer.ToLower() == "y") 
-                {
+                if (answer.ToLower() == "y" || answer.ToLower() == "yes") { 
                     if (DirectoryFiles == null) {
                         WriteLineHighlight("Directory files not found.");
                         ReturnToMenu("");
@@ -699,10 +693,12 @@ class Program
 
                     WriteLineHighlight("Refactoring files...");
                     WriteLineHighlight("Please wait for the success prompt.");
-                    foreach (var file in DirectoryFiles) {                       
+                    foreach (var file in DirectoryFiles)
+                    {
                         var fileName = $"{(DirectoryName == "" ? "" : $"{DirectoryName}/")}{Path.GetFileName(file)}";
 
-                        if (string.IsNullOrEmpty(FileExtension) || !fileName.Contains($".{FileExtension}")) {
+                        if (string.IsNullOrEmpty(FileExtension) || !fileName.Contains($".{FileExtension}"))
+                        {
                             WriteLineHighlight("No file extension!");
                             ReturnToMenu("");
                             return;
@@ -718,10 +714,9 @@ class Program
                         var fileSrc = FullRefactorDirectoryPath;
                         File.Move(fileSrc + fileName, fileSrc + newFileName);
                     }
-
                     WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
                 }
-                else if (answer.ToLower() == "n") {
+                else {
                     ReturnToMenu("");
                     return;
                 }
@@ -761,24 +756,28 @@ class Program
 
                 if (!string.IsNullOrEmpty(input))
                 {
-                    List<string> directories;
-                    try {
-                        directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    bool validDir = GetDirectory(input);
+                    if (validDir) {
+                        CreateFiles("");
                     }
-                    catch (Exception ex)
-                    {
-                        WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
-                        ReturnToMenu("");
-                        return;
-                    }
-                    directories.Add(FullRefactorDirectoryPath);
-                    foreach (string entry in directories)
-                    {
-                        DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
-                        DirectoryFiles = Directory.GetFiles(entry, $"*.{AssetExtension}");
-                        Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
-                    }
-                    CreateFiles("");
+                    //List<string> directories;
+                    //try {
+                    //    directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+                    //}
+                    //catch (Exception ex)
+                    //{
+                    //    WriteLineHighlight($"Could not find directory: {FullRefactorDirectoryPath}");
+                    //    ReturnToMenu("");
+                    //    return;
+                    //}
+                    //directories.Add(FullRefactorDirectoryPath);
+                    //foreach (string entry in directories)
+                    //{
+                    //    DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+                    //    DirectoryFiles = Directory.GetFiles(entry, $"*.{AssetExtension}");
+                    //    Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
+                    //}
+                    // CreateFiles("");
                 }
                 break;
 
@@ -832,7 +831,7 @@ class Program
                 }
 
                 var answer = GetSubCmdValue(input, "Confirm: ", "");
-                if (answer.ToLower() == "y") 
+                if (answer.ToLower() == "y" || answer.ToLower() == "yes")
                 {
                     if (DirectoryFiles == null) {
                         WriteLineHighlight("Directory files not found.");
@@ -882,11 +881,39 @@ class Program
 
                     WriteLineHighlight($"Succesfully refactored: {DirectoryFiles.Length} files!\n");
                 }
-                else if (answer.ToLower() == "n") {
+                else {
                     ReturnToMenu("");
                     return;
                 }
                 break;
         }
+    }
+
+    public static bool GetDirectory(string input)
+    {
+        List<string> directories;
+        try {
+            directories = Directory.GetDirectories(FullRefactorDirectoryPath, "*", SearchOption.AllDirectories).ToList();
+        }
+        catch (Exception ex) {
+            WriteLineHighlight($"Could not find directory: {input}");
+            ReturnToMenu("");
+            return false;
+        }
+        directories.Add(FullRefactorDirectoryPath);
+        foreach (string entry in directories) {
+            DirectoryName = entry.Replace($@"{FullRefactorDirectoryPath}", "").Replace("\\", "");
+            DirectoryFiles = Directory.GetFiles(entry, $"*.{FileExtension}");
+            Console.WriteLine($"Contains: {DirectoryFiles.Length} files.");
+        }
+
+        return true;
+    }
+
+    public static void HandleError(string error)
+    {
+        WriteLineHighlight(error);
+        ReturnToMenu("");
+        return;
     }
 }
